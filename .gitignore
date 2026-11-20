@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.ruff_cache/
+.pytest_cache/
+build/
+dist/
+
+# Generated data, forecasts and results stay local.
+fakebench_data/
+*.parquet
