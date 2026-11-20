@@ -28,6 +28,42 @@ SURFACE, INK, INK_SECONDARY, MUTED = "#fcfcfb", "#0b0b0b", "#52514e", "#898781"
 GRID, AXIS = "#e1e0d9", "#c3c2b7"
 
 
+def _matrix(results, track, names):
+    """Context length against horizon length: error ratio and departure."""
+    horizons = results["benchmark"]["horizons"]
+    any_model = results["models"][names[0]]["tracks"][track]["by_horizon_length"]
+    lengths = [k for k in any_model[str(horizons[-1])] if k != "all"]
+    lines = [
+        "",
+        f"### History length against horizon length ({track} track)",
+        "",
+        "Rows are the number of points the model was given, columns the number "
+        "of forecast steps scored (the first steps of the same "
+        f"{horizons[-1]}-step forecast). Each cell: error vs optimal, with "
+        "departure in brackets.",
+    ]
+    for name in names:
+        if name == OPTIMAL:
+            continue
+        cells = results["models"][name]["tracks"][track]["by_horizon_length"]
+        lines += [
+            "",
+            f"**{name}**",
+            "",
+            "| History | " + " | ".join(f"{h} steps" for h in horizons) + " |",
+            "|---|" + "---|" * len(horizons),
+        ]
+        for length in [*lengths, "all"]:
+            row = (
+                f"{cells[str(h)][length]['mase_ratio']:.3f} "
+                f"({cells[str(h)][length]['departure']:.2f})"
+                for h in horizons
+            )
+            label = "all lengths" if length == "all" else f"{length} points"
+            lines.append(f"| {label} | " + " | ".join(row) + " |")
+    return lines
+
+
 def leaderboard(results):
     """Markdown: one table per track, best error ratio first."""
     info = results["benchmark"]
@@ -82,30 +118,7 @@ def leaderboard(results):
                 f"| {label} | {row['mase_ratio']:.3f} ({low:.3f} to {high:.3f}) "
                 f"| {row['mase']:.2f} | {row['beats_optimal']:.0%} | {shape} |"
             )
-        lengths = sorted(
-            {
-                int(k)
-                for _, m in results["models"].items()
-                for k in m["tracks"].get(track, {}).get("by_context_length", {})
-            }
-        )
-        lines += [
-            "",
-            "By length of the history the model was given: error vs optimal, "
-            "with departure in brackets.",
-            "",
-            "| Model | " + " | ".join(f"{n} points" for n in lengths) + " |",
-            "|---|" + "---|" * len(lengths),
-        ]
-        for name, _ in rows:
-            if name == OPTIMAL:
-                continue
-            groups = results["models"][name]["tracks"][track]["by_context_length"]
-            cells = (
-                f"{groups[str(n)]['mase_ratio']:.3f} ({groups[str(n)]['departure']:.2f})"
-                for n in lengths
-            )
-            lines.append(f"| {name} | " + " | ".join(cells) + " |")
+        lines += _matrix(results, track, [name for name, _ in rows])
     lines += ["", "## What the columns mean", ""]
     labels = {
         "mase_ratio": "Error vs optimal",

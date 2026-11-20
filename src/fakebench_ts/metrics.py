@@ -65,11 +65,13 @@ def recent_slope(context, horizon):
     return float(steps @ (window - window.mean()) / (steps @ steps))
 
 
-def score_forecasts(dataset, forecasts, *, series_ids=None):
+def score_forecasts(dataset, forecasts, *, series_ids=None, steps=None):
     """Per-series scores and per-step curves for one model.
 
     `forecasts` maps series id to the point forecast for each horizon step.
-    Returns a frame with one row per series and a dict of [series, step] arrays.
+    `steps` scores only the first so many steps of each forecast, as if the
+    horizon were that short. Returns a frame with one row per series and a
+    dict of [series, step] arrays.
     """
     rows, curves = [], {"error": [], "optimal_error": [], "departure": []}
     for series in dataset:
@@ -81,12 +83,15 @@ def score_forecasts(dataset, forecasts, *, series_ids=None):
                 f"Forecast for {series.series_id} must be {series.horizon} finite "
                 f"values, got shape {forecast.shape}"
             )
+        horizon = series.horizon if steps is None else steps
+        forecast = forecast[:horizon]
+        future = series.future[:horizon]
+        optimal = series.optimal_forecast[:horizon]
         scale = mase_scale(series.context)
         last = series.context[-1]
-        optimal = series.optimal_forecast
         distance = np.abs(forecast - optimal) / scale
-        error = np.abs(series.future - forecast) / scale
-        optimal_error = np.abs(series.future - optimal) / scale
+        error = np.abs(future - forecast) / scale
+        optimal_error = np.abs(future - optimal) / scale
         # The shape the model drew, measured from the last observed value.
         path = (forecast - last) / scale
         net_move = path[-1] - path[0]
@@ -105,9 +110,7 @@ def score_forecasts(dataset, forecasts, *, series_ids=None):
                 "end_shift": path[-1],
                 # What a model would add by the last step if it extrapolated the
                 # recent trend, or returned to the context mean, in full.
-                "trend_pull": recent_slope(series.context, series.horizon)
-                * series.horizon
-                / scale,
+                "trend_pull": recent_slope(series.context, horizon) * horizon / scale,
                 "mean_pull": (series.context.mean() - last) / scale,
             }
         )
@@ -160,8 +163,12 @@ def summarise(frame, *, bootstrap=2000, seed=0):
     }
 
 
-def evaluate(dataset, forecasts_by_model, *, bootstrap=2000):
+def evaluate(dataset, forecasts_by_model, *, bootstrap=2000, horizons=(32, 64)):
     """Score several models on the series all of them forecast.
+
+    Besides the full horizon, each model is scored on the first `horizons`
+    steps of the same forecasts, for every context length: the matrix under
+    `by_horizon_length` (horizon, then context length or `all`).
 
     The optimal forecast is always scored too, as the model `optimal`, so its
     own shape is on record where it is not simply the last value.
@@ -178,11 +185,14 @@ def evaluate(dataset, forecasts_by_model, *, bootstrap=2000):
     shared = set.intersection(*(set(f) for f in forecasts_by_model.values()))
     if not shared:
         raise ValueError("The models have no forecast series in common")
+    cuts = sorted(h for h in set(horizons) if 2 <= h < dataset.horizon)
+    cuts.append(dataset.horizon)
     results = {
         "benchmark": {
             "name": dataset.spec["name"],
             "sha256": dataset.sha256,
             "horizon": dataset.horizon,
+            "horizons": cuts,
             "series": len(dataset),
             "scored_series": len(shared),
         },
@@ -210,6 +220,22 @@ def evaluate(dataset, forecasts_by_model, *, bootstrap=2000):
                     for name, values in curves.items()
                 },
             }
+        for steps in cuts:
+            cut = (
+                frame
+                if steps == dataset.horizon
+                else score_forecasts(
+                    dataset, forecasts, series_ids=shared, steps=steps
+                )[0]
+            )
+            for track, rows in cut.groupby("track", sort=True):
+                tracks[track].setdefault("by_horizon_length", {})[str(steps)] = {
+                    "all": summarise(rows, bootstrap=bootstrap),
+                    **{
+                        str(length): summarise(group, bootstrap=bootstrap)
+                        for length, group in rows.groupby("context_length", sort=True)
+                    },
+                }
         results["models"][model] = {"tracks": tracks}
         frames.append(frame.assign(model=model))
     return results, pd.concat(frames, ignore_index=True)

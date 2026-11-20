@@ -8,6 +8,7 @@ version = "0.1.0"
 description = "Benchmark of time-series foundation models on random walks, where the best forecast is known exactly"
 readme = "README.md"
 requires-python = ">=3.10"
+license = { file = "LICENSE" }
 dependencies = [
     "numpy>=1.26",
     "scipy>=1.11",

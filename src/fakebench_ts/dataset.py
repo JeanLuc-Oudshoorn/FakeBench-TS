@@ -22,7 +22,7 @@ class Spec:
 
     name: str = "v1"
     seed: int = 20261120
-    horizon: int = 64
+    horizon: int = 112
     context_lengths: tuple = (128, 512, 2048)
     # Series per context length for a family of weight 1.
     series_per_weight: int = 50

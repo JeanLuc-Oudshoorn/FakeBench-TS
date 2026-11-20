@@ -60,13 +60,15 @@ Each series draws its own shape parameters, a step size between 0.01 and 1000
 
 The built-in dataset `v1` has 2,100 series: 1,500 symmetric and 600 skewed,
 split evenly over context lengths of 128, 512 and 2,048 points, each followed
-by 64 points to forecast. The two Student-t families have double weight.
+by 112 points to forecast. The two Student-t families have double weight.
 
 A model sees the whole context of a series and nothing else, so a third of
 the forecasts are made from 128 points of history, a third from 512 and a
-third from 2,048. The leaderboard also reports every model separately for
-each context length, because a short history makes a chance run look more
-like a trend.
+third from 2,048. A short history makes a chance run look more like a trend.
+
+Every model is asked once for all 112 steps. The leaderboard also scores the
+first 32 and the first 64 steps of that same forecast, and shows each model as
+a matrix of history length against horizon length.
 
 ## What is measured
 
@@ -187,6 +189,10 @@ and `score` refuses forecasts made from a different file.
   horizon the way a random walk's do is not measured yet.
 - Steps are independent and identically distributed. Walks with changing
   volatility are also unpredictable in direction, and are not included.
+
+## Licence
+
+MIT; see [LICENSE](LICENSE).
 
 ## Tests
 

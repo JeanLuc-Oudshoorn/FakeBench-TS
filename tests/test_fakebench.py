@@ -98,8 +98,8 @@ class Data(unittest.TestCase):
         self.assertEqual(len(self.dataset), weights * 20 * 2)
         for series in self.dataset:
             self.assertIn(series.context_length, (160, 400))
-            self.assertEqual(series.future.shape, (64,))
-            self.assertEqual(series.optimal_offset.shape, (64,))
+            self.assertEqual(series.future.shape, (112,))
+            self.assertEqual(series.optimal_offset.shape, (112,))
             self.assertTrue(np.isfinite(series.context).all())
             self.assertEqual(series.context[0], series.start)
             if series.track == SYMMETRIC:
@@ -202,7 +202,21 @@ class Scores(unittest.TestCase):
 
     def test_horizon_curves_and_groups(self):
         track = self.results["models"]["drift"]["tracks"][SYMMETRIC]
-        self.assertEqual(len(track["by_horizon"]["departure"]), 64)
+        self.assertEqual(len(track["by_horizon"]["departure"]), 112)
+        self.assertEqual(self.results["benchmark"]["horizons"], [32, 64, 112])
+        matrix = track["by_horizon_length"]
+        self.assertEqual(sorted(matrix), ["112", "32", "64"])
+        self.assertEqual(sorted(matrix["32"]), ["160", "400", "all"])
+        self.assertEqual(matrix["112"]["all"], track["overall"])
+        self.assertEqual(matrix["112"]["400"], track["by_context_length"]["400"])
+        # A cut scores the first steps of the same forecast.
+        self.assertAlmostEqual(
+            matrix["32"]["all"]["departure"],
+            float(np.mean(track["by_horizon"]["departure"][:32])),
+        )
+        self.assertLess(
+            matrix["32"]["all"]["departure"], matrix["64"]["all"]["departure"]
+        )
         self.assertEqual(sorted(track["by_context_length"]), ["160", "400"])
         self.assertIn("student_t_heavy", track["by_family"])
         # Drift departs further from the last value at every step.
