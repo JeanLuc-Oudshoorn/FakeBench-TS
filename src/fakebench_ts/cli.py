@@ -28,7 +28,7 @@ from .models import (
 )
 from .report import leaderboard, write_plots
 
-DEFAULT_DATA = "fakebench_data/fakebench_v1.parquet"
+DEFAULT_DATA = "data/fakebench_v1.parquet"  # the dataset in the repository
 
 
 def _option(text):

@@ -119,6 +119,12 @@ class Data(unittest.TestCase):
         for name, spec in SPECS.items():
             self.assertIs(matches_reference(generate_dataset(spec)), True, name)
 
+    def test_the_dataset_in_the_repository_is_the_reference_data(self):
+        path = Path(__file__).resolve().parents[1] / "data" / "fakebench_v1.parquet"
+        published = load_dataset(path)
+        self.assertEqual(published.spec, SPECS["v1"].to_dict())
+        self.assertIs(matches_reference(published), True)
+
     def test_changed_data_does_not_match_the_reference(self):
         self.assertIsNone(matches_reference(self.dataset))
         changed = generate_dataset(SPECS["v1"])

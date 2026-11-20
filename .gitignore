@@ -7,6 +7,10 @@ __pycache__/
 build/
 dist/
 
-# Generated data, forecasts and results stay local.
+# Generated data, forecasts and results stay local; only the published
+# dataset is kept.
 fakebench_data/
 *.parquet
+!data/fakebench_v1.parquet
+data/forecasts/
+data/results/

@@ -5,12 +5,28 @@
 # FakeBench-TS
 
 FakeBench-TS tests what a time-series foundation model does with a series that
-cannot be predicted. Every series is a random walk: each value is the previous
-value plus a random step drawn from a distribution with mean zero. The past
-says nothing about the direction of the next step, so the best forecast is
-known exactly. Any trend, cycle or return to the mean in a model's forecast is
-something the model made up, and the benchmark measures how much of it there
-is and what it costs.
+cannot be predicted.
+
+## Why this benchmark
+
+Forecasting benchmarks score models on series that have structure to find:
+trends, seasons, relations between variables. A model does well on them by
+finding that structure. None of them asks the opposite question: what does
+the model do when there is nothing to find?
+
+That question matters in practice. Someone who downloads a foundation model
+and hands it a series usually does not know beforehand whether the series can
+be forecast at all. If it cannot, the right answer is to carry the last
+observation forward. A model that instead draws a trend or a cycle gives a
+confident forecast of something that is not there, and nothing in the output
+tells the user so.
+
+FakeBench-TS measures exactly this. Every series is a random walk: each value
+is the previous value plus a random step drawn from a distribution with mean
+zero. The past says nothing about the direction of the next step, so the best
+forecast is known exactly. Any trend, cycle or return to the mean in a model's
+forecast is something the model made up, and the benchmark measures how much
+of it there is and what it costs.
 
 ## What the best forecast is
 
@@ -119,16 +135,18 @@ Or run it from a checkout without installing: `PYTHONPATH=src python -m fakebenc
 ## Use
 
 ```bash
-fakebench-ts generate                         # writes fakebench_data/fakebench_v1.parquet
 fakebench-ts run --model chronos2 --option device=cuda
 fakebench-ts run --model timestral --option device=cuda
 fakebench-ts score                            # leaderboard, results.json, plots
 ```
 
-`run` writes one file of forecasts per model to `fakebench_data/forecasts/`.
+Run these from the repository folder. They use the dataset that ships with
+the repository, `data/fakebench_v1.parquet`.
+
+`run` writes one file of forecasts per model to `data/forecasts/`.
 `score` reads every file there, adds the reference forecasts, and writes
 `leaderboard.md`, `results.json` (also broken down by family, context length
-and forecast step), `per_series.parquet` and plots to `fakebench_data/results/`.
+and forecast step), `per_series.parquet` and plots to `data/results/`.
 `run --limit 100` forecasts an even subset for a quick trial.
 
 Built-in adapters: `chronos2`, `chronos_bolt`, `timestral`. They need the
@@ -164,6 +182,12 @@ scored. From Python the same steps are `load_dataset`, `run_forecaster`,
 `evaluate` and `leaderboard` in `fakebench_ts`.
 
 ## Reproducibility
+
+The v1 dataset is stored in the repository as `data/fakebench_v1.parquet`
+(17 MB), so everyone scores models on the same series. Use this file for
+results you want to compare with others. `fakebench-ts generate` builds a
+dataset from a spec instead, into `fakebench_data/`; that is meant for custom
+specs.
 
 A dataset is fully determined by its spec (seed, families, lengths). Each
 series has its own random stream, so adding a family does not change the
