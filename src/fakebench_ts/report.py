@@ -82,6 +82,30 @@ def leaderboard(results):
                 f"| {label} | {row['mase_ratio']:.3f} ({low:.3f} to {high:.3f}) "
                 f"| {row['mase']:.2f} | {row['beats_optimal']:.0%} | {shape} |"
             )
+        lengths = sorted(
+            {
+                int(k)
+                for _, m in results["models"].items()
+                for k in m["tracks"].get(track, {}).get("by_context_length", {})
+            }
+        )
+        lines += [
+            "",
+            "By length of the history the model was given: error vs optimal, "
+            "with departure in brackets.",
+            "",
+            "| Model | " + " | ".join(f"{n} points" for n in lengths) + " |",
+            "|---|" + "---|" * len(lengths),
+        ]
+        for name, _ in rows:
+            if name == OPTIMAL:
+                continue
+            groups = results["models"][name]["tracks"][track]["by_context_length"]
+            cells = (
+                f"{groups[str(n)]['mase_ratio']:.3f} ({groups[str(n)]['departure']:.2f})"
+                for n in lengths
+            )
+            lines.append(f"| {name} | " + " | ".join(cells) + " |")
     lines += ["", "## What the columns mean", ""]
     labels = {
         "mase_ratio": "Error vs optimal",

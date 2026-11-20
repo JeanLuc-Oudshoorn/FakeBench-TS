@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/fakebench_logo.webp" alt="FakeBench logo" width="560">
+</p>
+
 # FakeBench-TS
 
 FakeBench-TS tests what a time-series foundation model does with a series that
@@ -57,6 +61,12 @@ Each series draws its own shape parameters, a step size between 0.01 and 1000
 The built-in dataset `v1` has 2,100 series: 1,500 symmetric and 600 skewed,
 split evenly over context lengths of 128, 512 and 2,048 points, each followed
 by 64 points to forecast. The two Student-t families have double weight.
+
+A model sees the whole context of a series and nothing else, so a third of
+the forecasts are made from 128 points of history, a third from 512 and a
+third from 2,048. The leaderboard also reports every model separately for
+each context length, because a short history makes a chance run look more
+like a trend.
 
 ## What is measured
 
